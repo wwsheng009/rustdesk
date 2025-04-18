@@ -27,7 +27,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          submodules: recursive  # Initialize submodules
+          submodules: recursive  # Initialize submodules for hbb_common
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -66,9 +66,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Build naming binary
+      - name: Build naming binary (Windows)
+        if: matrix.os == 'windows-latest'
         run: cargo build --bin naming --release --target ${{ matrix.target }}
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: pwsh
+        env:
+          CARGO_INCREMENTAL: 0
+          CARGO_TERM_COLOR: always
+
+      - name: Build naming binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: cargo build --bin naming --release --target ${{ matrix.target }}
+        shell: bash
         env:
           CARGO_INCREMENTAL: 0
           CARGO_TERM_COLOR: always
