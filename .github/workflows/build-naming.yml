@@ -21,29 +21,24 @@ jobs:
             target: x86_64-apple-darwin
             artifact-name: naming-macos
 
-    # Increase timeout for Windows builds
     timeout-minutes: 60
 
     steps:
-      # Checkout the repository code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Set up Rust toolchain
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: 1.75.0
           targets: ${{ matrix.target }}
 
-      # Install Windows dependencies (if needed)
       - name: Install Windows dependencies
         if: matrix.os == 'windows-latest'
         run: |
           choco install -y visualstudio2019buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools"
         shell: pwsh
 
-      # Cache dependencies
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -55,15 +50,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      # Build the naming binary
-      - name: Build naming binary
+      - name: Build naming binary (Windows)
+        if: matrix.os == 'windows-latest'
         run: cargo build --bin naming --release --target ${{ matrix.target }}
-        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        shell: pwsh
         env:
           CARGO_INCREMENTAL: 0
           CARGO_TERM_COLOR: always
 
-      # Upload the compiled binary
+      - name: Build naming binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: cargo build --bin naming --release --target ${{ matrix.target }}
+        shell: bash
+        env:
+          CARGO_INCREMENTAL: 0
+          CARGO_TERM_COLOR: always
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
