@@ -1,0 +1,60 @@
+name: Build Naming Binary
+
+# Trigger the workflow manually
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    # Define the matrix for multiple platforms
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact-name: naming-linux
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact-name: naming-windows.exe
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact-name: naming-macos
+
+    steps:
+      # Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Set up Rust toolchain
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.75.0  # Matches rust-version = "1.75" in Cargo.toml
+          targets: ${{ matrix.target }}
+
+      # Cache dependencies to speed up builds
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      # Build the naming binary
+      - name: Build naming binary
+        run: cargo build --bin naming --release --target ${{ matrix.target }}
+
+      # Upload the compiled binary as an artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}
+          path: target/${{ matrix.target }}/release/${{ matrix.artifact-name }}
+          if-no-files-found: error
